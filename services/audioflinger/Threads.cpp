@@ -1432,7 +1432,6 @@ sp<AudioFlinger::EffectHandle> AudioFlinger::ThreadBase::createEffect_l(
     bool chainCreated = false;
     bool effectCreated = false;
     bool effectRegistered = false;
-    audio_unique_id_t effectId = AUDIO_UNIQUE_ID_USE_UNSPECIFIED;
 
     lStatus = initCheck();
     if (lStatus != NO_ERROR) {
@@ -1515,17 +1514,15 @@ sp<AudioFlinger::EffectHandle> AudioFlinger::ThreadBase::createEffect_l(
         ALOGV("createEffect_l() got effect %p on chain %p", effect.get(), chain.get());
 
         if (effect == 0) {
-            effectId = mAudioFlinger->nextUniqueId(AUDIO_UNIQUE_ID_USE_EFFECT);
+            audio_unique_id_t id = mAudioFlinger->nextUniqueId(AUDIO_UNIQUE_ID_USE_EFFECT);
             // Check CPU and memory usage
-            lStatus = AudioSystem::registerEffect(
-                    desc, mId, chain->strategy(), sessionId, effectId);
+            lStatus = AudioSystem::registerEffect(desc, mId, chain->strategy(), sessionId, id);
             if (lStatus != NO_ERROR) {
                 goto Exit;
             }
             effectRegistered = true;
             // create a new effect module if none present in the chain
-            lStatus = chain->createEffect_l(
-                    effect, this, desc, effectId, sessionId, pinned);
+            lStatus = chain->createEffect_l(effect, this, desc, id, sessionId, pinned);
             if (lStatus != NO_ERROR) {
                 goto Exit;
             }
@@ -1557,7 +1554,7 @@ Exit:
             chain->removeEffect_l(effect);
         }
         if (effectRegistered) {
-            AudioSystem::unregisterEffect(effectId);
+            AudioSystem::unregisterEffect(effect->id());
         }
         if (chainCreated) {
             removeEffectChain_l(chain);
